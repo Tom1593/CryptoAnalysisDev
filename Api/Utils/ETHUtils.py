@@ -1,11 +1,11 @@
 
-class BTCUtils:
+class ETHUtils:
     def extract_transaction_data(txn_obj):
         """
         Returns the required data from a transaction dict/json
     
         Args:
-            txn_obj: txn data object from the Blockchain.info api representing 1 txn
+            txn_obj: txn data object from the api interface representing 1 txn
         
         Returns:
             A tuple containing four lists:
@@ -13,30 +13,14 @@ class BTCUtils:
                 - output_hashes: A list of strings representing output transaction hashes (empty in this case).
                 - input_amounts: A list of integers representing input transaction amounts in Satoshis.
                 - output_amounts: A list of integers representing output transaction amounts in Satoshis.
+                but they will each contain one element beacuse its eth txn
         """
-        inputs = {}
-        outputs = {}
-
-        for sender_entry in txn_obj['inputs']:
-            inner_entry = sender_entry['prev_out']
-            if inputs.get(inner_entry['addr']):
-                inputs[inner_entry['addr']] += inner_entry['value']
-            else:
-                inputs[inner_entry['addr']] = inner_entry['value']
-        for receiver_entry in txn_obj['out']:
-            if outputs.get(receiver_entry['addr']):
-                outputs[receiver_entry['addr']] += receiver_entry['value']
-            else:
-                outputs[receiver_entry['addr']] = receiver_entry['value']
-        #transform to lists
-        input_hashes = [hash for hash in inputs]
-        output_hashes = [hash for hash in outputs]
-        input_amounts = [inputs[hash] for hash in inputs]
-        output_amounts = [outputs[hash] for hash in outputs]
-        return input_hashes, output_hashes, input_amounts, output_amounts
+        amount = int(txn_obj['value'],16)
+        return ([txn_obj['from']],[txn_obj['to']],[amount],[amount])
     def filter_transactions_by_timestamp(transactions, reference_timestamp, amount_transfered, original_txn_hash, later=True):
         """
         Filters a list of transactions based on a reference timestamp and tracks sent/received amounts.
+        in eth it seems no negative only direction
 
         Args:
             transactions: A list of dictionaries representing Bitcoin transactions.
@@ -52,9 +36,9 @@ class BTCUtils:
         for txn in transactions:
             if txn['hash'] == original_txn_hash:
                 continue
-            # Extract the timestamp and amount from the transaction data (replace with your keys)
-            txn_timestamp = txn.get("time", 0)
-            txn_amount = abs(txn['result'])
+            # Extract the timestamp and amount from the transaction data
+            txn_timestamp = int(txn.get("timeStamp", 0))
+            txn_amount = int(txn['value'])
 
             if later and txn_timestamp > reference_timestamp and total_amount < amount_transfered:
                 filtered_transactions.append(txn)
