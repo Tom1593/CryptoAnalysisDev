@@ -1,7 +1,7 @@
 from .wrappers.TransactionDBWrapper import TransactionDB
 from .wrappers.WalletDBWrapper import WalletDB
 from .wrappers.TransactionWalletDBWrapper import TransactionWalletDB
-from Api.wrappers.BTCWrapper import BTCWrapper
+from Api.wrappers.ApiWrapper import ApiWrapper,BlockchainType
 from dotenv import load_dotenv
 import os
 
@@ -34,43 +34,54 @@ class DBService:
     self.transactions = TransactionDB(self.db_filenames['transactions'])
     self.wallets = WalletDB(self.db_filenames['wallets'])
     self.txn_wallets = TransactionWalletDB(self.db_filenames['txn_wallets'])  # Instance of TransactionWalletDB
-    self.btc_api = BTCWrapper()
+    self.api_wrapper = ApiWrapper()
     
-  def extract_wallets_from_txn_json(self, txn_json):
+  def extract_wallets_from_txn_json(self, txn_json, Coin:BlockchainType):
     """
     Returns the required data from a transaction dict/json
 
     Args:
-        txn_obj: txn data object from the Blockchain.info api
+        txn_obj: txn data object from the api interface
     
     Returns:
         A list of wallet hashes
     """
     wallet_hashes = []
-    for sender_entry in txn_json['inputs']:
-      inner_entry = sender_entry['prev_out']
-      wallet_hashes.append(inner_entry['addr'])
-    for receiver_entry in txn_json['out']:
-      wallet_hashes.append(receiver_entry['addr'])
+    if Coin == BlockchainType.BTC:
+      for sender_entry in txn_json['inputs']:
+        inner_entry = sender_entry['prev_out']
+        wallet_hashes.append(inner_entry['addr'])
+      for receiver_entry in txn_json['out']:
+        wallet_hashes.append(receiver_entry['addr'])
+    elif Coin == BlockchainType.ETH:
+      #in an eth txn only two wallets are involved
+      wallet_hashes.append(txn_json['from'])
+      wallet_hashes.append(txn_json['to'])
     return wallet_hashes
-  def extract_txns_from_wallet_json(self, wallet_json,limit = 5):
+  def extract_txns_from_wallet_json(self, wallet_json,Coin:BlockchainType, limit = 5):
     """
     Returns the required data from a wallet dict/json
 
     Args:
-        wallet_json: txn data object from the Blockchain.info api
+        wallet_json: txn data object from the api interface
     
     Returns:
         A list of wallet hashes
     """
     txn_hashes = []
-    for tx in wallet_json['txs']:
-      txn_hashes.append(tx['hash'])
-      if txn_hashes.__len__ == limit:
-        break
+    if Coin == BlockchainType.BTC:
+      for tx in wallet_json['txs']:
+        txn_hashes.append(tx['hash'])
+        if txn_hashes.__len__ == limit:
+          break
+    elif Coin == BlockchainType.ETH:
+      for tx in wallet_json:
+        txn_hashes.append(tx['hash'])
+        if txn_hashes.__len__ == limit:
+          break
     return txn_hashes
   
-  def insert_transaction(self, txn_hash,ts ,json_data, wallet_hashes):
+  def insert_transaction(self, txn_hash,ts ,json_data, wallet_hashes, Coin:BlockchainType):
     """
     Inserts a transaction and its associations with wallets.
 
@@ -90,7 +101,7 @@ class DBService:
       #for the sake of not quering the api more than needed
       wallet_json_data = self.wallets.get_wallet_info(wallet)
       if not wallet_json_data:
-        wallet_json_data = self.btc_api.get_wallet(wallet) 
+        wallet_json_data = self.api_wrapper.get_wallet(wallet, Coin) 
       wallet_id = self.wallets.insert_wallet(wallet, wallet_json_data)
       if not wallet_id:
           # print("usefull data")
@@ -100,7 +111,7 @@ class DBService:
       if not self.txn_wallets.insert_txn_wallet_pair(linking_data):
           return False  # Abort on any insert failure
     return True
-  def insert_wallet(self, wallet_hash, json_data, txn_hashes):
+  def insert_wallet(self, wallet_hash, json_data, txn_hashes,Coin:BlockchainType):
     """
     Inserts a wallet and its associated tnxs.
 
@@ -119,7 +130,7 @@ class DBService:
     for txn in txn_hashes:
       txn_json_data = self.transactions.get_transaction_json(txn)
       if not txn_json_data:
-        txn_json_data = self.btc_api.get_transaction(txn)
+        txn_json_data = self.api_wrapper.get_transaction(txn,Coin)
         
       ts = txn_json_data['time']
       txn_id = self.transactions.insert_transaction(txn, ts, txn_json_data)
@@ -180,9 +191,9 @@ class DBService:
     
     return self.txn_wallets.get_wallets_for_transaction(txn_hash)
   # Similar methods for wallets and transaction-wallet associations (optional)
-  def retrive_txn_json(self, txn_hash):
+  def retrive_txn_json(self, txn_hash, Coin:BlockchainType):
     """
-    Retrive json data from db first and if it cant find the tx it will reach to the api
+    Retrive json data from db first and if it cant find the txn it will reach to the api
     
     Args:
         txn_hash: the hash of the txn
@@ -193,11 +204,11 @@ class DBService:
     txn_data = self.get_transaction_json(txn_hash)
     if not txn_data:
         #first time seeing this txn
-        txn_data = self.btc_api.get_transaction(txn_hash=txn_hash)
-        relevant_wallets = self.extract_wallets_from_txn_json(txn_data)
-        self.insert_transaction(txn_hash, txn_data['time'],txn_data, relevant_wallets)
+        txn_data = self.api_wrapper.get_transaction(txn_hash, Coin)
+        relevant_wallets = self.extract_wallets_from_txn_json(txn_data,Coin)
+        self.insert_transaction(txn_hash, txn_data['time'],txn_data, relevant_wallets,Coin)
     return txn_data
-  def retrive_wallet_json(self, wallet_hash):
+  def retrive_wallet_json(self, wallet_hash,Coin:BlockchainType):
     """
     Retrive json data from db first and if it cant find the wallet it will reach to the api
     
@@ -210,9 +221,9 @@ class DBService:
     wallet_data = self.get_wallet_info(wallet_hash)
     if not wallet_data:
         #first time seeing this txn
-        wallet_data = self.btc_api.get_wallet(wallet_hash)
-        relevant_txns = self.extract_txns_from_wallet_json(wallet_data)
-        self.insert_wallet(wallet_hash,wallet_data,relevant_txns)
+        wallet_data = self.api_wrapper.get_wallet(wallet_hash,Coin)
+        relevant_txns = self.extract_txns_from_wallet_json(wallet_data,Coin)
+        self.insert_wallet(wallet_hash,wallet_data,relevant_txns,Coin)
     return wallet_data
    
   def close_connections(self):
