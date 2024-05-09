@@ -20,7 +20,7 @@ class GraphUtils:
         net.add_node(node)
 
     for start, end, data in graph.edges(data=True):
-        net.add_edge(start, end, label=data['weight'], arrows={'to': {'enabled': True, 'scaleFactor': 0.5}})
+        net.add_edge(start, end, value=data['weight']/1e2,title=str(data['weight']), arrows={'to': {'enabled': True, 'scaleFactor': 0.5}})
 
 
     # Customize the network
@@ -63,5 +63,5 @@ class GraphUtils:
     """)
     vis_network.from_nx(graph)
     
-    vis_network.show("Transaction Graph.html",notebook=False)
+    # vis_network.show("Transaction Graph.html",notebook=False)
     net.show("Transaction Graph2.html",notebook=False)  

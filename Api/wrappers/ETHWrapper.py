@@ -29,7 +29,7 @@ class ETHWrapper:
         print(f"Failed to fetch transaction data for transaction hash {txn_hash}.")
         return None
     
-    def get_wallet(self, wallet_hash, limit=50):
+    def get_wallet(self, wallet_hash, limit=10):
         """
         Retrieves information about a specific Etherium Wallet using Ehterscan.io API.
         there are included parameters in the request:
@@ -42,12 +42,14 @@ class ETHWrapper:
         Returns:
             Json data: A dictionary representing the Wallet or None if an error occurs.
         """
-        response = requests.get(self.base_url + f'api?module=account&action=txlist&address={wallet_hash}&sort=desc&offest=0&limit={limit}&apikey={self.ETHERSCAN_API_KEY}')
+        response = requests.get(self.base_url + f'api?module=account&action=txlist&address={wallet_hash}&sort=desc&offest=0&apikey={self.ETHERSCAN_API_KEY}')
         if response.status_code == 200:
             json = response.json()
-            if json['result'] is not None:
-                return json['result']
-        print(f"Failed to fetch transaction data for transaction hash {wallet_hash}.")
+            if json['result'] is not None and json['status'] == '1':
+                return json['result'][:limit]
+        print(f"""Failed to fetch transaction data for transaction hash {wallet_hash}.
+              \nError: {json['message']}\n
+              Message: {json['result']}""")
         return None
     
     def get_block_by_number(self,block_number):

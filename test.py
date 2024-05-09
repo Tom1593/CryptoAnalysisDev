@@ -8,8 +8,9 @@ def main():
     api_interface = ApiWrapper()
     analyzer = TxnAnalysis(dbs)
     # eth
-    wallet_hash = "0x7e2a2FA2a064F693f0a55C5639476d913Ff12D05"
-    txn_hash = "0xca232dc103375f6ccf026b78611a3eb4c260555e15d8ee54877374a3ab42a137"
+    
+    wallet_hash = "0xefcBF90f60e0714362D942a054e6B716983fEA2b"
+    txn_hash = "0x2ce955a844d306882c429420c97511200854b88dc61d95076768834af7e630d2"
     block_number = "0xcf2420"
     json_data = api_interface.eth_api.get_transaction(txn_hash)
     # wallet_data = api_interface.eth_api.get_wallet(wallet_hash)
@@ -18,7 +19,7 @@ def main():
     # data = dbs.retrive_txn_json(txn_hash,BlockchainType.ETH)
     # data = dbs.retrive_wallet_json(wallet_hash,BlockchainType.ETH)
     # txns = dbs.extract_txns_from_wallet_json(data,BlockchainType.ETH,limit=10)
-    print(f"eht is: {int(json_data['value'],16)/1e18}")
+    # print(f"eht is: {int(json_data['value'],16)/1e18}")
     
     
     # btc
@@ -32,8 +33,8 @@ def main():
     
     #main test
     
-    # graph = analyzer.analyze_transaction(txn_hash,BlockchainType.ETH)
-    # GraphUtils.create_graph(graph)
+    graph = analyzer.analyze_transaction(txn_hash,BlockchainType.ETH)
+    GraphUtils.create_graph(graph)
     
     
 if __name__ == "__main__":

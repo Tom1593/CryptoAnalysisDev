@@ -15,11 +15,12 @@ class ETHUtils:
                 - output_amounts: A list of integers representing output transaction amounts in Satoshis.
                 but they will each contain one element beacuse its eth txn
         """
-        
-        return (txn_obj['from'],txn_obj['to'],txn_obj['value'],txn_obj['value'])
+        amount = int(txn_obj['value'],16)
+        return ([txn_obj['from']],[txn_obj['to']],[amount],[amount])
     def filter_transactions_by_timestamp(transactions, reference_timestamp, amount_transfered, original_txn_hash, later=True):
         """
         Filters a list of transactions based on a reference timestamp and tracks sent/received amounts.
+        in eth it seems no negative only direction
 
         Args:
             transactions: A list of dictionaries representing Bitcoin transactions.
@@ -36,8 +37,8 @@ class ETHUtils:
             if txn['hash'] == original_txn_hash:
                 continue
             # Extract the timestamp and amount from the transaction data
-            txn_timestamp = txn.get("timeStamp", 0)
-            txn_amount = abs(txn['result'])
+            txn_timestamp = int(txn.get("timeStamp", 0))
+            txn_amount = int(txn['value'])
 
             if later and txn_timestamp > reference_timestamp and total_amount < amount_transfered:
                 filtered_transactions.append(txn)

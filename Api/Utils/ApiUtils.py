@@ -1,5 +1,5 @@
-from BTCUtils import BTCUtils
-from ETHUtils import ETHUtils
+from .BTCUtils import BTCUtils
+from .ETHUtils import ETHUtils
 from Enumerators.BlockChainTypeEnum import BlockchainType
 class ApiUtils():
     def extract_transaction_data(txn_data, Coin:BlockchainType):
@@ -17,7 +17,7 @@ class ApiUtils():
         elif Coin == BlockchainType.ETH:
             return ETHUtils.extract_transaction_data(txn_data)
         
-    def filter_transactions_by_timestamp(transactions, reference_timestamp, amount_transfered, original_txn_hash, Coin, later):
+    def filter_transactions_by_timestamp(transactions, reference_timestamp, amount_transfered, original_txn_hash, Coin:BlockchainType, later):
         """
         intermidiate function to use the correct follow up proceess regarding the correct coin type
 
@@ -35,16 +35,16 @@ class ApiUtils():
                                                              later)
         elif Coin == BlockchainType.ETH:
             return ETHUtils.filter_transactions_by_timestamp(transactions,
-                                                             reference_timestamp,
+                                                             int(reference_timestamp),
                                                              amount_transfered,
                                                              original_txn_hash,
                                                              later)
     
-    def format_price(Coin:BlockchainType):
+    def format_price(Amount, Coin:BlockchainType):
         if Coin == BlockchainType.BTC:
-            return 1e8
+            return Amount/1e8
         elif Coin == BlockchainType.ETH:
-            return 1e18
+            return Amount/1e18
     
     def extract_transactions_list_from_wallet_data(wallet_json,Coin:BlockchainType):
         if Coin == BlockchainType.BTC:

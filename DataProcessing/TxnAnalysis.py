@@ -35,22 +35,24 @@ class TxnAnalysis:
         # graph set up
         for in_wallet,in_amount in zip(txn_in_out[0],txn_in_out[2]):
             graph.add_node(in_wallet)
-            graph.add_edge(in_wallet,txn_hash,weight=in_amount/ApiUtils.format_price(Coin))
-            prev_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(in_wallet,Coin)),
+            graph.add_edge(in_wallet,txn_hash,weight=ApiUtils.format_price(in_amount,Coin))
+            prev_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(in_wallet,Coin),Coin),
                                                                   txn_time,
                                                                   in_amount,
                                                                   txn_hash,
+                                                                  Coin,
                                                                   later=False)
             queue.append((in_wallet,prev_txns))
             
         for out_wallet, out_amount in zip(txn_in_out[1],txn_in_out[3]):
-            next_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(out_wallet,Coin)),
+            next_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(out_wallet,Coin),Coin),
                                                                   txn_time,
                                                                   out_amount,
                                                                   txn_hash,
+                                                                  Coin,
                                                                   later=True)
             graph.add_node(out_wallet)
-            graph.add_edge(txn_hash,out_wallet,weight=out_amount/ApiUtils.format_price(Coin))
+            graph.add_edge(txn_hash,out_wallet,weight=ApiUtils.format_price(out_amount,Coin))
             queue.append((out_wallet,next_txns))
             
         
@@ -60,17 +62,18 @@ class TxnAnalysis:
             #add wallets nodes and connect them based on current wallet and txn
             for txn in txn_list:
                 txn_in_out = ApiUtils.extract_transaction_data(txn,Coin)
-                txn_time = txn['time']
+                txn_time = txn['timeStamp']
                 
                 for in_wallet,in_amount in zip(txn_in_out[0],txn_in_out[2]):
                     if in_wallet not in graph:
                         graph.add_node(in_wallet)
                         
-                    graph.add_edge(in_wallet,current_wallet,weight=in_amount/ApiUtils.format_price(Coin))
-                    prev_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(in_wallet,Coin)),
+                    graph.add_edge(in_wallet,current_wallet,weight=ApiUtils.format_price(in_amount,Coin))
+                    prev_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(in_wallet,Coin),Coin),
                                                                           txn_time,
                                                                           in_amount,
                                                                           current_wallet,
+                                                                          Coin,
                                                                           later=False)
                     queue.append((in_wallet,prev_txns))
                     
@@ -79,11 +82,12 @@ class TxnAnalysis:
                         graph.add_node(in_wallet)
                         
                     graph.add_node(out_wallet)
-                    graph.add_edge(current_wallet,out_wallet,weight=out_amount/ApiUtils.format_price(Coin))
-                    next_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(out_wallet,Coin)),
+                    graph.add_edge(current_wallet,out_wallet,weight=ApiUtils.format_price(out_amount,Coin))
+                    next_txns = ApiUtils.filter_transactions_by_timestamp(ApiUtils.extract_transactions_list_from_wallet_data(self.dbs.retrive_wallet_json(out_wallet,Coin),Coin),
                                                                           txn_time,
                                                                           out_amount,
                                                                           current_wallet,
+                                                                          Coin,
                                                                           later=True)
                     queue.append((out_wallet,next_txns))
                 current_depth += 1
